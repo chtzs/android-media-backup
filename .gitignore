@@ -1,0 +1,8 @@
+adb/
+__pycache__/
+backup/
+.vscode/
+node_modules/
+.DS_Store
+backup_log.json
+.venv
