@@ -9,8 +9,8 @@ from datetime import datetime
 from media import MediaInfo, IMAGE_EXTS, VIDEO_EXTS
 
 # TMP = Path(os.environ["TEMP"])          # Windows 临时目录
-PHONE_TMP = "/sdcard/.tmp_photo_list.txt"   # 手机临时文件
-STAT_OUT  = "/sdcard/.tmp_stat_out.txt"     # 手机结果文件
+PHONE_TMP_IN = "/sdcard/.amb_tmp_in.txt"   # 手机临时文件
+PHONE_TMP_OUT  = "/sdcard/.amb_tmp_out.txt"     # 手机结果文件
 
 
 def exec(cmd: Union[str, List[str]]) -> str:
@@ -36,7 +36,7 @@ def exec(cmd: Union[str, List[str]]) -> str:
         raise RuntimeError(f"Failed to execute adb shell: {cmd}\n{completed.stderr}")
     return completed.stdout
 
-def exec_by_tempfile(executable: str, cmd: Union[str, List[str]]='') -> str:
+def exec_by_tempfile(cmd: Union[str, List[str]]='') -> str:
     # Write to temp file
     with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
         if isinstance(cmd, list):
@@ -51,16 +51,14 @@ def exec_by_tempfile(executable: str, cmd: Union[str, List[str]]='') -> str:
         
     try:
         # Push to phone
-        push(tmp_local, PHONE_TMP)
-        # print(f"exec: {executable} {cmd}")
-        exec([executable, f'$(cat "{PHONE_TMP}") >"{STAT_OUT}"'])
-        # Collect output
-        out = exec(['cat', STAT_OUT])
+        push(tmp_local, PHONE_TMP_IN)
+        # Run and get output
+        out = exec(f'sh "{PHONE_TMP_IN}"')
         return out
     finally:
         # Delete temp files
         os.unlink(tmp_local)
-        exec(["rm", "-f", PHONE_TMP, STAT_OUT])
+        exec(["rm", "-f", PHONE_TMP_IN])
 
 def push(local: str, dest: str) -> str:
     completed = subprocess.run(
@@ -102,7 +100,7 @@ def devices() -> str:
 def calc_files_size(files: list):
     if not files:
         return {}
-    out = exec_by_tempfile('stat -c "%n %s"', files)
+    out = exec_by_tempfile(['stat -c "%n %s"'] + [f'"{file}"' for file in files])
     sizes = {}
     for line in out.splitlines():
         if line.strip():
@@ -145,7 +143,7 @@ def copy_files(media_files: List[MediaInfo], dest: str):
         pull(file.path, dest)
         
 def md5_checksum(files: List[str]) -> List[str]:
-    out = exec_by_tempfile('md5sum', files)
+    out = exec_by_tempfile(['md5sum'] + [f'"{file}"' for file in files])
     return out.strip().splitlines()
         
 def select_range(media_files: List[MediaInfo], start: datetime, end: datetime) -> List[MediaInfo]:

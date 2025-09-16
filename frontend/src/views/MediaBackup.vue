@@ -462,7 +462,7 @@ const startBackup = async () => {
 
 const loadBackupFiles = async () => {
   try {
-    const response = await fetch(`${getApiUrl('PREVIEW_BACKUP')}?backup_dir=${backupDir.value}`)
+    const response = await fetch(`${getApiUrl('PREVIEW_BACKUP')}?backup_dir=${encodeURIComponent(backupDir.value)}`)
     if (response.ok) {
       const data = await response.json()
       backupFiles.value = data.files.map((file: any) => ({
